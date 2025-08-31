@@ -227,14 +227,6 @@ declare class TradeOfferManager extends EventEmitter {
 		options?: { startTimer?: boolean }
 	): void;
 
-	/**
-	 * Configure (start/stop) rollback tracking. Safe to call multiple times.
-	 * You can inject/override the save hook and/or preloaded rollback data here.
-	 */
-	configureRollbackTracking(
-		opts?: TradeOfferManager.RollbackTrackingOptions
-	): void;
-
 	on<T extends keyof TradeOfferManager.TradeOfferManagerEvents>(
 		eventType: T,
 		callback: TradeOfferManager.TradeOfferManagerEvents[T]
@@ -313,19 +305,6 @@ declare namespace TradeOfferManager {
 		tradeID: string | number;
 		state: number; // ETradeOfferState.Accepted
 		isOurOffer: true;
-	}
-
-	/** configureRollbackTracking options */
-	interface RollbackTrackingOptions {
-		enabled?: boolean;
-		pollInterval?: number;
-		windowMs?: number;
-		maxPagesPerCycle?: number;
-		pageSize?: number;
-
-		// One-shot initialization of rollback data
-		initialRollbackData?: any;
-		rollbackData?: RollbackBlock; // alias
 	}
 
 	// ----------------------------------
