@@ -786,5 +786,7 @@ declare namespace TradeOfferManager {
 		rollbackAnchorsMax?: number;
 		rollbackAnchorGapSec?: number;
 		rollbackMaxWatchChecksPerCycle?: number;
+		rollbackMaxWatchCount?: number;
+		rollbackMaxRolledCount?: number;
 	}
 }
