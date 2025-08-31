@@ -5,7 +5,7 @@ import SteamUser = require("steam-user");
 import SteamCommunity = require("steamcommunity");
 import CEconItem = require("steamcommunity/classes/CEconItem");
 import FileManager = require("file-manager");
-import TradeOffer = require("./lib/classes/TradeOffer");
+import TradeOffer = require("./classes/TradeOffer");
 
 export = TradeOfferManager;
 

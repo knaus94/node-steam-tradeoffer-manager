@@ -1,4 +1,4 @@
-import TradeOfferManager = require("../../index");
+import TradeOfferManager = require("../index");
 import SteamID = require("steamid");
 import CEconItem = require("steamcommunity/classes/CEconItem");
 
