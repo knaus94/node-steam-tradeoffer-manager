@@ -776,15 +776,12 @@ declare namespace TradeOfferManager {
 		dataDirectory?: string | null;
 		gzipData?: boolean;
 		savePollData?: boolean;
-		rollbackEnabled?: boolean;
 		rollbackPollInterval?: number;
-		rollbackWindowMs?: number;
-		rollbackMaxPagesPerCycle?: number;
 		rollbackHistoryPageSize?: number;
-		rollbackPerCycleStatusChecks?: number;
-		rollbackFirstCheckDelayMs?: number;
-		rollbackBackoffScheduleMs?: number[];
-		rollbackData?: RollbackBlock;
-		saveRollbackData?: boolean;
+		rollbackMaxScanMsPerCycle?: number;
+		rollbackScanMarginSec?: number;
+		rollbackAnchorsMax?: number;
+		rollbackAnchorGapSec?: number;
+		rollbackMaxWatchChecksPerCycle?: number;
 	}
 }
