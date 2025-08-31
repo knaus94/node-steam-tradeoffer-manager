@@ -1,20 +1,19 @@
 {
 	"name": "@dessly/steam-tradeoffer-manager",
-	"version": "2.12.3",
+	"version": "2.12.31",
 	"description": "A simple trade offers API for Steam",
 	"main": "./lib/index.js",
-	"types": "./index.d.ts",
+	"types": "./lib/index.d.ts",
 	"exports": {
 	  ".": {
-		"types": "./index.d.ts",
+		"types": "./lib/index.d.ts",
 		"require": "./lib/index.js",
 		"default": "./lib/index.js"
 	  },
 	  "./lib/*": "./lib/*"
 	},
 	"files": [
-	  "lib/**",
-	  "index.d.ts"
+	  "lib/**"
 	],
 	"dependencies": {
 	  "@doctormckay/stdlib": "^1.16.0",
