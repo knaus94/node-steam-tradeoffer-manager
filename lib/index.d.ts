@@ -5,7 +5,7 @@ import SteamUser = require("steam-user");
 import SteamCommunity = require("steamcommunity");
 import CEconItem = require("steamcommunity/classes/CEconItem");
 import FileManager = require("file-manager");
-import TradeOffer = require("./classes/TradeOffer");
+import TradeOffer = require("./lib/classes/TradeOffer");
 
 export = TradeOfferManager;
 
@@ -24,6 +24,16 @@ declare class TradeOfferManager extends EventEmitter {
     readonly apiKey: string | null;
     steamID: SteamID | null;
     storage: FileManager;
+
+    // Rollback tracking runtime configuration (public for introspection/tuning)
+    rollbackEnabled: boolean;
+    rollbackPollInterval: number;
+    rollbackWindowMs: number;
+    rollbackMaxPagesPerCycle: number;
+    rollbackHistoryPageSize: number;
+
+    // Optional hook (fire-and-forget). If provided and returns a Promise, rejections are logged internally.
+    saveRollbackData?: (data: TradeOfferManager.RollbackBlock) => void | Promise<void>;
 
     /**
      * Sets node-steam-tradeoffer-manager's internal cookie buffer and retrieves your API key, registering one if needed.
@@ -105,9 +115,7 @@ declare class TradeOfferManager extends EventEmitter {
     ): void;
 
     /**
-     * Gets the contents of your own inventory. This method uses the newer /inventory/SteamID endpoint, which is less rate-limited than the older, deprecated /profiles/SteamID/inventory/json
-     * endpoint. However, the output data is slightly different. The only known difference right now is that app_data is not available. You will need to use other means to obtain that data
-     * if you need it. Don't rely on the older endpoint and the deprecated loadInventory method as it will likely be removed in the future.
+     * Gets the contents of your own inventory using the newer /inventory/SteamID endpoint.
      *
      * @param appid The Steam App ID of the game for which you want to load your own inventory
      * @param contextid The ID of the context within the app that you're loading the inventory for
@@ -142,14 +150,6 @@ declare class TradeOfferManager extends EventEmitter {
 
     /**
      * THIS METHOD IS DEPRECATED AS OF v2.5.0; USE getInventoryContents INSTEAD.
-     *
-     * Retrieves the contents of your own inventory for a specific game and context.
-     *
-     * @param appid The Steam App ID of the game for which you want to load your inventory
-     * @param contextid The ID of the context within the app that you're loading the inventory for
-     * @param tradableOnly true to only include tradable items, false to include all
-     * @param callback Invoked when data is ready, includes an Error on failure (null on success), an array of the user's inventory items as CEconItem objects,
-     * and an array of the user's currency items as CEconItem objects
      */
     loadInventory(
         appid: number,
@@ -159,16 +159,7 @@ declare class TradeOfferManager extends EventEmitter {
     ): void;
 
     /**
-     * HIS METHOD IS DEPRECATED AS OF v2.5.0; USE getUserInventoryContents INSTEAD.
-     *
-     * Retrieves the contents of some other user's inventory for a specific game and context.
-     *
-     * @param steamID Either a SteamID object or a string which can parse into one
-     * @param appid The Steam App ID of the game for which you want to load the user's inventory
-     * @param contextid The ID of the context within the app that you're loading the inventory for
-     * @param tradableOnly true to only include tradable items, false to include all
-     * @param callback Invoked when data is ready, includes an Error on failure (null on success), an array of the user's inventory items as CEconItem objects,
-     * and an array of the user's currency items as CEconItem objects
+     * THIS METHOD IS DEPRECATED AS OF v2.5.0; USE getUserInventoryContents INSTEAD.
      */
     loadUserInventory(
         steamID: SteamID | string,
@@ -187,7 +178,6 @@ declare class TradeOfferManager extends EventEmitter {
 
     /**
      * Finds offers which contain the given item(s). Any offer which contains at least one item you passed in will be returned.
-     * Might be useful to avoid sending duplicate offers, or to cancel previous ones.
      *
      * @param items Either a single item object (with appid, contextid, and assetid/id properties) or an array of item objects
      * @param includeInactive If true, then offers which aren't Active or InEscrow will be checked. Default false.
@@ -201,20 +191,34 @@ declare class TradeOfferManager extends EventEmitter {
     ): void;
 
     /**
-     * Finds offers which contain the given item(s). Any offer which contains at least one item you passed in will be returned. Might be useful to avoid sending duplicate offers,
-     * or to cancel previous ones.
-     *
-     * @param items Either a single item object (with appid, contextid, and assetid/id properties) or an array of item objects
-     * @param callback Called on completion with an Error on failure (null on success), an array of TradeOffer objects for offers you sent which contain the item(s),
-     * and an array of TradeOffer objects for offers you received which contain the item(s)
+     * Finds offers which contain the given item(s). Overload without includeInactive.
      */
     getOffersContainingItems(items: CEconItem | CEconItem[], callback: TradeOfferManager.OfferCallback): void;
 
     /**
-     * Immediately performs a poll. Can be used even if timed polling is disabled to poll on your own schedule. Don't worry about spamming this method,
-     * node-steam-tradeoffer-manager will automatically limit polls to at most one per second.
+     * Immediately performs a poll. Can be used even if timed polling is disabled.
      */
     doPoll(): void;
+
+    /**
+     * Replace current rollback block with provided data.
+     * Use this after you load data asynchronously elsewhere.
+     *
+     * @param data Rollback block { watch, offerToTrade, cursor }
+     * @param options Optional flags, e.g., { startTimer?: boolean }
+     */
+    setRollbackData(
+        data: any,
+        options?: { startTimer?: boolean },
+    ): void;
+
+    /**
+     * Configure (start/stop) rollback tracking. Safe to call multiple times.
+     * You can inject/override the save hook and/or preloaded rollback data here.
+     */
+    configureRollbackTracking(
+        opts?: TradeOfferManager.RollbackTrackingOptions,
+    ): void;
 
     on<T extends keyof TradeOfferManager.TradeOfferManagerEvents>(
         eventType: T,
@@ -242,6 +246,65 @@ declare namespace TradeOfferManager {
         rollback_new_assetid?: number;
         rollback_new_contextid?: number;
     }
+
+    // ---- Rollback tracking types ----
+
+    /** Single watched trade entry */
+    interface RollbackWatchEntry {
+        offerId: string | number;
+        tradeId: string | number;
+        acceptedAt: number; // ms epoch
+        until: number; // ms epoch
+        lastSeenStatus: number; // numeric status from trade history (or ETradeOfferState.Accepted initially)
+        lastChecked: number; // ms epoch
+    }
+
+    /** Cursor for GetTradeHistory paging */
+    interface RollbackCursor {
+        start_after_time: number; // seconds
+        start_after_tradeid: string;
+    }
+
+    /** Persisted rollback block */
+    interface RollbackBlock {
+        watch: Record<string, RollbackWatchEntry>;         // tradeid -> watch entry
+        offerToTrade: Record<string, string>;              // offerId -> tradeid
+        cursor: RollbackCursor | null;
+    }
+
+    /** Minimal shape of a trade history entry as returned by GetTradeHistory */
+    interface TradeHistoryEntry {
+        tradeid: string | number;
+        status: number;         // 0..12 etc.
+        time_init?: number;     // seconds epoch
+        [k: string]: any;
+    }
+
+    /** Payload in tradeRolledBack event when offer lookup fails */
+    interface RollbackOfferFallback {
+        id: string | number;
+        tradeID: string | number;
+        state: number; // ETradeOfferState.Accepted
+        isOurOffer: true;
+    }
+
+    /** configureRollbackTracking options */
+    interface RollbackTrackingOptions {
+        enabled?: boolean;
+        pollInterval?: number;
+        windowMs?: number;
+        maxPagesPerCycle?: number;
+        pageSize?: number;
+
+        // Late injection/override of the save hook (fire-and-forget)
+        saveRollbackData?: (data: RollbackBlock) => void | Promise<void>;
+
+        // One-shot initialization of rollback data
+        initialRollbackData?: any;
+        rollbackData?: any; // alias
+    }
+
+    // ----------------------------------
 
     interface ETradeOfferState {
         /* Invalid. */
@@ -599,72 +662,46 @@ declare namespace TradeOfferManager {
     interface TradeOfferManagerEvents {
         /**
          * Emitted when polling detects a new trade offer sent to us. Only emitted if polling is enabled.
-         *
-         * @param offer A TradeOffer object for the newly-received offer
          */
         newOffer: (offer: TradeOffer) => void;
 
         /**
-         * Emitted when an offer we sent changes state. This might mean that it was accepted/declined by the other party, that we cancelled it, or that we confirmed a pending offer via email.
-         * Only emitted if polling is enabled.
-         *
-         * @param offer A TradeOffer object for the changed offer
-         * @param oldState The previous known ETradeOfferState of the offer
+         * Emitted when an offer we sent changes state. Only emitted if polling is enabled.
          */
         sentOfferChanged: (offer: TradeOffer, oldState: number) => void;
 
         /**
-         * Emitted when the manager automatically cancels an offer due to either your cancelTime constructor option or your cancelOfferCount constructor option. sentOfferChanged will also be
-         * emitted on next poll.
-         *
-         * @param offer TradeOffer object for the canceled offer
-         * @param reason A string containing the reason why it was canceled ("cancelTime" - The cancelTime timeout was reached, "cancelOfferCount" - The cancelOfferCount limit was reached)
+         * Emitted when an offer is canceled automatically by cancelTime or cancelOfferCount.
          */
         sentOfferCanceled: (offer: TradeOffer, reason: "cancelTime" | "cancelOfferCount") => void;
 
         /**
-         * Emitted when the manager automatically cancels an offer due to your pendingCancelTime constructor option. sentOfferChanged will also be emitted on next poll.
-         *
-         * @param offer A TradeOffer object for the canceled offer
+         * Emitted when a pending offer is canceled automatically by pendingCancelTime.
          */
         sentPendingOfferCanceled: (offer: TradeOffer) => void;
 
         /**
-         * Emitted when the manager finds a trade offer that was sent by us, but that wasn't sent via node-steam-tradeoffer-manager (i.e. it's not in the poll data, so this will emit for
-         * all sent offers on every startup if you don't restore poll data).
-         *
-         * You could use this to cancel offers that error when you call send() but actually go through later, because of how awful Steam is.
-         *
-         * @param offer A TradeOffer object for the offer that was sent
+         * Emitted when manager finds a sent offer that wasn't sent via this instance.
          */
         unknownOfferSent: (offer: TradeOffer) => void;
 
         /**
-         * Emitted when an offer we received changes state. This might mean that it was cancelled by the other party, or that we accepted/declined it. Only emitted if polling is enabled.
-         *
-         * @param offer A TradeOffer object for the changed offer
-         * @param oldState The previous known ETradeOfferState of the offer
+         * Emitted when a received offer changes state. Only emitted if polling is enabled.
          */
         receivedOfferChanged: (offer: TradeOffer, oldState: number) => void;
 
         /**
-         * Emitted when polling reveals that we have a new trade offer that was created from a real-time trade session that requires confirmation. See real-time trades for more information.
-         *
-         * @param offer A TradeOffer object for the offer that needs to be confirmed
+         * Emitted when a real-time trade created offer requires confirmation.
          */
         realTimeTradeConfirmationRequired: (offer: TradeOffer) => void;
 
         /**
-         * Emitted when polling reveals that a trade offer that was created from a real-time trade is now Accepted, meaning that the trade has completed. See real-time trades for more information.
-         *
-         * @param offer A TradeOffer object for the offer that has completed
+         * Emitted when a real-time trade created offer completes (Accepted).
          */
         realTimeTradeCompleted: (offer: TradeOffer) => void;
 
         /**
-         * Emitted when there's a problem polling the API. You can use this to alert users that Steam is currently down or acting up, if you wish.
-         *
-         * @param err An Error object
+         * Emitted when there's a problem polling the API.
          */
         pollFailure: (err: Error) => void;
 
@@ -675,42 +712,33 @@ declare namespace TradeOfferManager {
 
         /**
          * Emitted when new poll data is available.
-         *
-         * @param data The new poll data
          */
         pollData: (data: any) => void;
 
         /**
-         * Emitted whenever a getOffers call succeeds, regardless of the source of the call. Note that if filter is EOfferFilter.ActiveOnly then there may have been a historical
-         * cutoff provided so there may also be some historical offers present in the output.
-         *
-         * @param filter The EOfferFilter value that was used to get this list
-         * @param sent An array of TradeOffer objects for offers we sent
-         * @param received An array of TradeOffer objects for offers we received
+         * Emitted whenever a getOffers call succeeds.
          */
         offerList: (filter: number, sent: TradeOffer[], received: TradeOffer[]) => void;
 
         /**
-         * Emitted whenever TradeOfferManager detects that your web cookies have expired and need to be refreshed. When this happens, you should obtain new cookies from whichever module you initially got them from.
-         *
-         * @param err An Error object
+         * Emitted whenever web cookies have expired and need to be refreshed.
          */
         sessionExpired: (err: Error) => void;
 
         /**
-         * Emitted whenever TradeOfferManager encounters a debug message.
-         * 
-         * @param message A string containing the message to be logged
+         * Emitted when Steam trade history indicates that a previously accepted trade (initiated by our offer) was rolled back.
+         * The first argument is either a full TradeOffer instance or a minimal fallback payload if fetching the offer failed.
+         * The second argument is the raw trade history entry that signaled the rollback.
          */
-        debug: (message: string) => void;
+        tradeRolledBack: (
+            offer: TradeOffer | RollbackOfferFallback,
+            historyEntry: TradeHistoryEntry
+        ) => void;
 
         /**
-         * Emitted when a trade is rolled back.
-         * 
-         * @param offer A TradeOffer object for the offer that was rolled back
-         * @param rollbackBlock A rollback block object
+         * Emitted whenever TradeOfferManager encounters a debug message.
          */
-        tradeRolledBack: (offer: TradeOffer, rollbackBlock: any) => void;
+        debug: (message: string) => void;
     }
 
     interface TradeOfferManagerOptions {
@@ -733,12 +761,23 @@ declare namespace TradeOfferManager {
         dataDirectory?: string | null;
         gzipData?: boolean;
         savePollData?: boolean;
+
+        // ---- New rollback-related options ----
         rollbackEnabled?: boolean;
         rollbackPollInterval?: number;
         rollbackWindowMs?: number;
         rollbackMaxPagesPerCycle?: number;
         rollbackHistoryPageSize?: number;
-        saveRollbackData?: (rollbackBlock: any) => void | Promise<void>;
+
+        /**
+         * Fire-and-forget persistence hook for rollback block. You may return a Promise; rejections are logged internally.
+         */
+        saveRollbackData?: (data: RollbackBlock) => void | Promise<void>;
+
+        /**
+         * Optional preloaded rollback block to set at construction time.
+         * Equivalent to calling setRollbackData(data, { startTimer: false }) and then enabling tracking via configureRollbackTracking().
+         */
         initialRollbackData?: any;
     }
 }

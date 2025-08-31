@@ -169,14 +169,14 @@ declare class TradeOffer {
      *
      * @param item - An item object
      */
-    addMyItem(item: CEconItem): boolean;
+    addMyItem(item: Partial<CEconItem>): boolean;
 
     /**
      * Convenience method which simply calls addMyItem for each item in the array. Returns the number of items that were successfully added.
      *
      * @param items - An array of item objects
      */
-    addMyItems(items: CEconItem[]): number;
+    addMyItems(items: Partial<CEconItem>[]): number;
 
     /**
      * Removes an item from your side of the trade offer. Returns true if the item was found and removed successfully, or false if the item wasn't found in the offer.
@@ -185,28 +185,28 @@ declare class TradeOffer {
      *
      * @param item - An item object
      */
-    removeMyItem(item: CEconItem): boolean;
+    removeMyItem(item: Partial<CEconItem>): boolean;
 
     /**
      * Convenience method which simply calls removeMyItem for each item in the array. Returns the number of items that were successfully removed.
      *
      * @param items - An array of item objects
      */
-    removeMyItems(items: CEconItem[]): number;
+    removeMyItems(items: Partial<CEconItem>[]): number;
 
     /**
      * Same as addMyItem, but for the partner's side of the trade.
      *
      * @param item - An item object
      */
-    addTheirItem(item: CEconItem): boolean;
+    addTheirItem(item: Partial<CEconItem>): boolean;
 
     /**
      * Convenience method which simply calls addTheirItem for each item in the array. Returns the number of items that were successfully added.
      *
      * @param items - An array of item objects
      */
-    addTheirItems(items: CEconItem[]): number;
+    addTheirItems(items: Partial<CEconItem>[]): number;
 
     /**
      * Removes an item from the other side of the trade offer. Returns true if the item was found and removed successfully, or false if the item wasn't found in the offer.
@@ -215,14 +215,14 @@ declare class TradeOffer {
      *
      * @param item - An item object
      */
-    removeTheirItem(item: CEconItem): boolean;
+    removeTheirItem(item: Partial<CEconItem>): boolean;
 
     /**
      * Convenience method which simply calls removeTheirItem for each item in the array. Returns the number of items that were successfully removed.
      *
      * @param items - An array of item objects
      */
-    removeTheirItems(items: CEconItem[]): number;
+    removeTheirItems(items: Partial<CEconItem>[]): number;
 
     /**
      * Returns true if the given item is in this offer, or false if not.
