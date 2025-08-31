@@ -1,6 +1,6 @@
 {
 	"name": "@dessly/steam-tradeoffer-manager",
-	"version": "2.12.34",
+	"version": "2.12.35",
 	"description": "A simple trade offers API for Steam",
 	"main": "./lib/index.js",
 	"types": "./lib/index.d.ts",
@@ -16,6 +16,10 @@
 	  "lib/**",
 	  "resources/**"
 	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/knaus94/node-steam-tradeoffer-manager.git"
+	},
 	"dependencies": {
 	  "@doctormckay/stdlib": "^1.16.0",
 	  "async": "^2.6.0",

@@ -760,19 +760,12 @@ declare namespace TradeOfferManager {
         dataDirectory?: string | null;
         gzipData?: boolean;
         savePollData?: boolean;
-
-        // ---- New rollback-related options ----
         rollbackEnabled?: boolean;
         rollbackPollInterval?: number;
         rollbackWindowMs?: number;
         rollbackMaxPagesPerCycle?: number;
         rollbackHistoryPageSize?: number;
-
-
-        /**
-         * Optional preloaded rollback block to set at construction time.
-         * Equivalent to calling setRollbackData(data, { startTimer: false }) and then enabling tracking via configureRollbackTracking().
-         */
-        initialRollbackData?: any;
+        rollbackData?: any;
+        saveRollbackData?: boolean; 
     }
 }
