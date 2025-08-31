@@ -781,6 +781,9 @@ declare namespace TradeOfferManager {
 		rollbackWindowMs?: number;
 		rollbackMaxPagesPerCycle?: number;
 		rollbackHistoryPageSize?: number;
+		rollbackPerCycleStatusChecks?: number;
+		rollbackFirstCheckDelayMs?: number;
+		rollbackBackoffScheduleMs?: number[];
 		rollbackData?: RollbackBlock;
 		saveRollbackData?: boolean;
 	}
