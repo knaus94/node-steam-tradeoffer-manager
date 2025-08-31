@@ -32,9 +32,6 @@ declare class TradeOfferManager extends EventEmitter {
     rollbackMaxPagesPerCycle: number;
     rollbackHistoryPageSize: number;
 
-    // Optional hook (fire-and-forget). If provided and returns a Promise, rejections are logged internally.
-    saveRollbackData?: (data: TradeOfferManager.RollbackBlock) => void | Promise<void>;
-
     /**
      * Sets node-steam-tradeoffer-manager's internal cookie buffer and retrieves your API key, registering one if needed.
      * Therefore, usage of this module constitutes agreement to the Steam Web API terms.
@@ -295,9 +292,6 @@ declare namespace TradeOfferManager {
         windowMs?: number;
         maxPagesPerCycle?: number;
         pageSize?: number;
-
-        // Late injection/override of the save hook (fire-and-forget)
-        saveRollbackData?: (data: RollbackBlock) => void | Promise<void>;
 
         // One-shot initialization of rollback data
         initialRollbackData?: any;
@@ -739,6 +733,11 @@ declare namespace TradeOfferManager {
          * Emitted whenever TradeOfferManager encounters a debug message.
          */
         debug: (message: string) => void;
+
+        /**
+         * Emitted when new rollback data is available.
+         */
+        rollbackData: (data: any) => void;
     }
 
     interface TradeOfferManagerOptions {
@@ -769,10 +768,6 @@ declare namespace TradeOfferManager {
         rollbackMaxPagesPerCycle?: number;
         rollbackHistoryPageSize?: number;
 
-        /**
-         * Fire-and-forget persistence hook for rollback block. You may return a Promise; rejections are logged internally.
-         */
-        saveRollbackData?: (data: RollbackBlock) => void | Promise<void>;
 
         /**
          * Optional preloaded rollback block to set at construction time.
