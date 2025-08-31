@@ -222,7 +222,10 @@ declare class TradeOfferManager extends EventEmitter {
 	 * @param data Rollback block { watch, offerToTrade, cursor }
 	 * @param options Optional flags, e.g., { startTimer?: boolean }
 	 */
-	setRollbackData(data: RollbackBlock, options?: { startTimer?: boolean }): void;
+	setRollbackData(
+		data: RollbackBlock,
+		options?: { startTimer?: boolean }
+	): void;
 
 	/**
 	 * Configure (start/stop) rollback tracking. Safe to call multiple times.
@@ -287,10 +290,21 @@ declare namespace TradeOfferManager {
 
 	/** Minimal shape of a trade history entry as returned by GetTradeHistory */
 	interface TradeHistoryEntry {
-		tradeid: string | number;
-		status: number; // 0..12 etc.
-		time_init?: number; // seconds epoch
-		[k: string]: any;
+		tradeid: string;
+		steamid_other: string;
+		time_init: number;
+		status: number;
+		assets_received: {
+			appid: number;
+			contextid: string;
+			assetid: string;
+			amount: string;
+			classid: string;
+			instanceid: string;
+			new_assetid: string;
+			new_contextid: string;
+		}[];
+		time_mod: number;
 	}
 
 	/** Payload in tradeRolledBack event when offer lookup fails */
