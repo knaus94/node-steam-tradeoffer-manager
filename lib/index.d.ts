@@ -143,6 +143,21 @@ declare class TradeOfferManager extends EventEmitter {
 	): void;
 
 	/**
+	 * Same as getInventoryContents, but returns a Promise.
+	 *
+	 * @param appid The Steam App ID of the game for which you want to load your own inventory
+	 * @param contextid The ID of the context within the app that you're loading the inventory for
+	 * @param tradableOnly true to only include tradable items, false to include all
+	 * @returns {Promise<CEconItem[]>}
+	 * and an array of the user's currency items as CEconItem objects
+	 */
+	getInventoryContentsPromise(
+		appid: number,
+		contextid: number,
+		tradableOnly: boolean
+	): Promise<CEconItem[]>;
+
+	/**
 	 * Same as getInventoryContents, but can retrieve another user's inventory.
 	 *
 	 * @param steamID Either a SteamID object or a string which can parse into one
@@ -161,14 +176,13 @@ declare class TradeOfferManager extends EventEmitter {
 	): void;
 
 	/**
-	 * Same as getPartnerInventoryContents, but can retrieve another user's inventory.
+	 * Get the tradable contents of your trade partner's inventory for a specific context.
 	 *
 	 * @param steamID Either a SteamID object or a string which can parse into one
-	 * @param appid The Steam App ID of the game for which you want to load the user's inventory
+	 * @param appid The Steam App ID of the game for which you want to load the partner's inventory
 	 * @param contextid The ID of the context within the app that you're loading the inventory for
-	 * @param tradableOnly true to only include tradable items, false to include all
-	 * @param callback Invoked when data is ready, includes an Error on failure (null on success), an array of the user's inventory items as CEconItem objects,
-	 * and an array of the user's currency items as CEconItem objects
+	 * @param callback Invoked when data is ready, includes an Error on failure (null on success), an array of the partner's inventory items as CEconItem objects,
+	 * and an array of the partner's currency items as CEconItem objects
 	 */
 	getPartnerInventoryContents(
 		sid: SteamID | string,
@@ -176,6 +190,20 @@ declare class TradeOfferManager extends EventEmitter {
 		contextid: number,
 		callback: TradeOfferManager.InventoryCallback
 	): void;
+
+	/**
+	 * Same as getPartnerInventoryContents, but returns a Promise.
+	 *
+	 * @param steamID Either a SteamID object or a string which can parse into one
+	 * @param appid The Steam App ID of the game for which you want to load the partner's inventory
+	 * @param contextid The ID of the context within the app that you're loading the inventory for
+	 * @returns {Promise<CEconItem[]>}
+	 */
+	getPartnerInventoryContentsPromise(
+		sid: SteamID | string,
+		appid: number,
+		contextid: number
+	): Promise<CEconItem[]>;
 
 	/**
 	 * THIS METHOD IS DEPRECATED AS OF v2.5.0; USE getInventoryContents INSTEAD.
