@@ -776,8 +776,6 @@ declare namespace TradeOfferManager {
 		dataDirectory?: string | null;
 		gzipData?: boolean;
 		savePollData?: boolean;
-		saveRollbackData?: boolean;
-		rollbackData?: RollbackBlock;
 		rollbackEnabled?: boolean;
 		rollbackPollInterval?: number;
 		rollbackHistoryPageSize?: number;
@@ -788,5 +786,8 @@ declare namespace TradeOfferManager {
 		rollbackMaxWatchChecksPerCycle?: number;
 		rollbackMaxWatchCount?: number;
 		rollbackMaxRolledCount?: number;
+		rollbackPruneSlackMs?: number;
+		rollbackData?: RollbackBlock;
+		saveRollbackData?: boolean;
 	}
 }
