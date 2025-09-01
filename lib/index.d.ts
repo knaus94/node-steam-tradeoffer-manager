@@ -138,7 +138,7 @@ declare class TradeOfferManager extends EventEmitter {
 	getInventoryContents(
 		appid: number,
 		contextid: number,
-		tradableOnly: boolean,
+		tradableOnly?: boolean,
 		callback: TradeOfferManager.InventoryCallback
 	): void;
 
@@ -154,7 +154,7 @@ declare class TradeOfferManager extends EventEmitter {
 	getInventoryContentsPromise(
 		appid: number,
 		contextid: number,
-		tradableOnly: boolean
+		tradableOnly?: boolean
 	): Promise<CEconItem[]>;
 
 	/**
