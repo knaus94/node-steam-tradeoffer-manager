@@ -151,7 +151,7 @@ declare class TradeOfferManager extends EventEmitter {
 	 * @returns {Promise<CEconItem[]>}
 	 * and an array of the user's currency items as CEconItem objects
 	 */
-	getInventoryContentsPromise(
+	getInventoryContentsAsync(
 		appid: number,
 		contextid: number,
 		tradableOnly?: boolean
@@ -199,7 +199,7 @@ declare class TradeOfferManager extends EventEmitter {
 	 * @param contextid The ID of the context within the app that you're loading the inventory for
 	 * @returns {Promise<CEconItem[]>}
 	 */
-	getPartnerInventoryContentsPromise(
+	getPartnerInventoryContentsAsync(
 		sid: SteamID | string,
 		appid: number,
 		contextid: number
